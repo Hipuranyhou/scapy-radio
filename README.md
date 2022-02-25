@@ -13,18 +13,12 @@ It includes:
 
 ## Supported radio protocols:
 
-* Bluetooth LE (advertising only)
 * 802.15.4 (used by Zigbee, Xbee, 6LoWPAN)
-* ZWave (European frequency, 868MHz)
 
 
 # Requirements
 
-You need to have a full working GNU Radio 3.7 installation.
-
-**Note**: You will need to edit GRC files if you are running with GNU Radio 3.7.5+
-because they changed the UHD Sink block (there is now 2 inputs, the first one being
-for commands instead of samples).
+You need to have a full working GNU Radio 3.8 installation.
 
 The provided GRC files have been fully tested with an Ettus B210 SDR but they
 should work just as fine with any other UHD compatible device.
@@ -75,11 +69,11 @@ The tool can be launched by using the following command:
 One in the scapy interactive shell, switching between radio protocols is as
 simple as:
 
-` >>> switch_radio_protocol("ZWave")`
+` >>> switch_radio_protocol("Zigbee")`
 
 You can also specify the radio protocol directly to some "radio-enabled" functions:
 
-` >>> sniff_radio(radio="ZWave")`
+` >>> sniff_radio(radio="Zigbee")`
 
 ## Radio commands
 
@@ -101,19 +95,4 @@ The tool allows writing and reading back PCAP files with the usual `scapy` comma
 >>> wrpcap("pcap-file.pcap", pkts)
 >>> pkts2 = rdpcap("pcap-file.pcap")
 ```
-
-
-# Tools
-
-## ZWave
-### Automaton\_stop\_alarm.py
-
-This script is a scapy Automaton that will send a *switch off* ZWave packet each times it
-listens a *switch on* ZWave packet.
-
-The script has been used to successfully disable a ZWave siren alarm automatically.
-
-### passive\_scan.py
-
-This script intends to passively scan and map ZWave automation network.
 
