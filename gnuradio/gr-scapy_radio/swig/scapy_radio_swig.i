@@ -2,7 +2,7 @@
 
 #define SCAPY_RADIO_API
 
-%include "gnuradio.i"			// the common stuff
+%include "gnuradio.i" // the common stuff
 
 //load generated python docstrings
 %include "scapy_radio_swig_doc.i"

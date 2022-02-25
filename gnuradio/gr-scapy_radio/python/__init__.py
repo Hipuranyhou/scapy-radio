@@ -31,22 +31,22 @@ try:
     from dl import RTLD_GLOBAL as _RTLD_GLOBAL
 except ImportError:
     try:
-	from DLFCN import RTLD_GLOBAL as _RTLD_GLOBAL
+        from DLFCN import RTLD_GLOBAL as _RTLD_GLOBAL
     except ImportError:
-	pass
+        pass
 
 if _RTLD_GLOBAL != 0:
     _dlopenflags = sys.getdlopenflags()
-    sys.setdlopenflags(_dlopenflags|_RTLD_GLOBAL)
+    sys.setdlopenflags(_dlopenflags | _RTLD_GLOBAL)
 # ----------------------------------------------------------------
 
 
 # import swig generated symbols into the scapy_radio namespace
 try:
-	# this might fail if the module is python-only
-	from scapy_radio_swig import *
+    # this might fail if the module is python-only
+    from .scapy_radio_swig import *
 except ImportError:
-	pass
+    pass
 
 # import any pure python here
 #

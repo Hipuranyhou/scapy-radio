@@ -22,9 +22,6 @@
 ########################################################################
 include(GrPlatform) #define LIB_SUFFIX
 
-include_directories(${Boost_INCLUDE_DIR})
-link_directories(${Boost_LIBRARY_DIRS})
-
 list(APPEND scapy_radio_sources
     add_gr_header_impl.cc
     strip_gr_header_impl.cc
@@ -37,7 +34,11 @@ if(NOT scapy_radio_sources)
 endif(NOT scapy_radio_sources)
 
 add_library(gnuradio-scapy_radio SHARED ${scapy_radio_sources})
-target_link_libraries(gnuradio-scapy_radio ${Boost_LIBRARIES} ${GNURADIO_ALL_LIBRARIES})
+target_link_libraries(gnuradio-scapy_radio gnuradio::gnuradio-runtime)
+target_include_directories(gnuradio-scapy_radio
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+    PUBLIC $<INSTALL_INTERFACE:include>
+  )
 set_target_properties(gnuradio-scapy_radio PROPERTIES DEFINE_SYMBOL "gnuradio_scapy_radio_EXPORTS")
 
 if(APPLE)
@@ -49,32 +50,30 @@ endif(APPLE)
 ########################################################################
 # Install built library files
 ########################################################################
-install(TARGETS gnuradio-scapy_radio
-    LIBRARY DESTINATION lib${LIB_SUFFIX} # .so/.dylib file
-    ARCHIVE DESTINATION lib${LIB_SUFFIX} # .lib file
-    RUNTIME DESTINATION bin              # .dll file
-)
+include(GrMiscUtils)
+GR_LIBRARY_FOO(gnuradio-scapy_radio)
 
 ########################################################################
 # Build and register unit test
 ########################################################################
 include(GrTest)
 
-include_directories(${CPPUNIT_INCLUDE_DIRS})
-
+# If your unit tests require special include paths, add them here
+#include_directories()
+# List all files that contain Boost.UTF unit tests here
 list(APPEND test_scapy_radio_sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_scapy_radio.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/qa_scapy_radio.cc
 )
+# Anything we need to link to for the unit tests go here
+list(APPEND GR_TEST_TARGET_DEPS gnuradio-scapy_radio)
 
-add_executable(test-scapy_radio ${test_scapy_radio_sources})
+if(NOT test_scapy_radio_sources)
+    MESSAGE(STATUS "No C++ unit tests... skipping")
+    return()
+endif(NOT test_scapy_radio_sources)
 
-target_link_libraries(
-  test-scapy_radio
-  ${GNURADIO_RUNTIME_LIBRARIES}
-  ${Boost_LIBRARIES}
-  ${CPPUNIT_LIBRARIES}
-  gnuradio-scapy_radio
-)
+foreach(qa_file ${test_scapy_radio_sources})
+    GR_ADD_CPP_TEST("scapy_radio_${qa_file}"
+        ${CMAKE_CURRENT_SOURCE_DIR}/${qa_file}
+    )
+endforeach(qa_file)
 
-GR_ADD_TEST(test_scapy_radio test-scapy_radio)
