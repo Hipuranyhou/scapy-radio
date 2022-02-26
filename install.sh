@@ -51,16 +51,18 @@ mkdir -p "${build_dir}" "${grc_dir}"
 
 # install scapy
 cd "${build_dir}"
-print_status "Installing scapy"
+print_status "SCAPY"
+print_status "Getting scapy"
 git clone https://github.com/secdev/scapy.git
 apply_patches scapy 
 cd scapy
+print_status "Installing scapy"
 sudo python3 setup.py install
 cd "${base_dir}"
 
 # install gnuradio blocks
 cd "${build_dir}"
-print_status "Installing gnuradio blocks"
+print_status "GNURADIO BLOCKS"
 while IFS= read -r block_url; do
   block_name="$(gr_block_name "${block_url}")"
   gr_block_get "${block_url}"
@@ -74,7 +76,7 @@ cd "${base_dir}"
 
 # install gnuradio flowgraphs
 cd gnuradio/grc
-print_status "Installing gnuradio flowgraphs"
+print_status "GNURADIO FLOWGRAPHS"
 oifs="$IFS"
 IFS=$'\n'
 for g in $(find . -type f -name "*.grc"); do
