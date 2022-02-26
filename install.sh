@@ -34,10 +34,14 @@ gr_block_get() {
 }
 
 gr_block_install() {
-  print_status "Installing ${1}"
   cd "${1}"
-  mkdir -p build && cd build 
-  cmake .. && make && sudo make install && sudo ldconfig
+  mkdir -p build && cd build
+  print_status "Configuring ${1}"
+  cmake ..
+  print_status "Building ${1}"
+  make
+  print_status "Installing ${1}"
+  sudo make install && sudo ldconfig
   cd ../..
 }
 
@@ -56,7 +60,7 @@ print_status "Getting scapy"
 git clone https://github.com/secdev/scapy.git
 apply_patches scapy 
 cd scapy
-print_status "Installing scapy"
+print_status "Building and installing scapy"
 sudo python3 setup.py install
 cd "${base_dir}"
 
@@ -82,6 +86,7 @@ IFS=$'\n'
 for g in $(find . -type f -name "*.grc"); do
   grc_name="$(basename -s .grc "${g}")"
   grc_path="${grc_dir}/${grc_name}"
+  print_status "Building and installing ${grc_name}"
   mkdir -p "${grc_path}"
   cp "${g}" "${grc_path}"
   if grcc -o "${grc_path}" "${g}"; then
