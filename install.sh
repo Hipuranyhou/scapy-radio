@@ -3,7 +3,14 @@
 # Copyright (C) Airbus DS CyberSecurity, 2014
 # Authors: Jean-Michel Picod, Arnaud Lebrun, Jonathan Christofer Demay
 
+print_status() {
+  [ ! -t 1 ] && return
+  [ -z "$(tput colors)" ] && return
+  echo "$(tput rev)$(tput bold) ${1} $(tput sgr0)"
+}
+
 apply_patches() {
+  print_status "Patching ${1}"
   [ ! -d "${base_dir}/patch/${1}" ] && return 
   oifs="$IFS"
   IFS=$'\n'
@@ -19,6 +26,7 @@ gr_block_name() {
 
 gr_block_get() {
   block_name="$(gr_block_name "${1}")"
+  print_status "Getting ${block_name}"
   git clone "${1}"
   cd "${block_name}"
   git checkout maint-3.8
@@ -26,6 +34,7 @@ gr_block_get() {
 }
 
 gr_block_install() {
+  print_status "Installing ${1}"
   cd "${1}"
   mkdir -p build && cd build 
   cmake .. && make && sudo make install && sudo ldconfig
@@ -42,6 +51,7 @@ mkdir -p "${build_dir}" "${grc_dir}"
 
 # install scapy
 cd "${build_dir}"
+print_status "Installing scapy"
 git clone https://github.com/secdev/scapy.git
 apply_patches scapy 
 cd scapy
@@ -50,6 +60,7 @@ cd "${base_dir}"
 
 # install gnuradio blocks
 cd "${build_dir}"
+print_status "Installing gnuradio blocks"
 while IFS= read -r block_url; do
   block_name="$(gr_block_name "${block_url}")"
   gr_block_get "${block_url}"
@@ -63,12 +74,13 @@ cd "${base_dir}"
 
 # install gnuradio flowgraphs
 cd gnuradio/grc
+print_status "Installing gnuradio flowgraphs"
 oifs="$IFS"
 IFS=$'\n'
 for g in $(find . -type f -name "*.grc"); do
   grc_name="$(basename -s .grc "${g}")"
   grc_path="${grc_dir}/${grc_name}"
-  mkdir "${grc_path}"
+  mkdir -p "${grc_path}"
   cp "${g}" "${grc_path}"
   if grcc -o "${grc_path}" "${g}"; then
     # gnuradio 3.8 xmlrpc is not python3, we fix it for you :-)
