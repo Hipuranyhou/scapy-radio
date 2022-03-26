@@ -11,7 +11,7 @@ print_status() {
 
 apply_patches() {
   print_status "Patching ${1}"
-  [ ! -d "${base_dir}/patch/${1}" ] && return 
+  [ ! -d "${base_dir}/patch/${1}" ] && return
   oifs="$IFS"
   IFS=$'\n'
   for p in $(find "${base_dir}/patch/${1}" -type f); do
@@ -48,7 +48,7 @@ gr_block_install() {
 # "consts"
 base_dir="$(pwd)"
 build_dir="${base_dir}/build"
-grc_dir="${HOME}/.scapy/radio"
+grc_dir="${HOME}/.config/scapy/radio/flowgraphs"
 
 # prepare directories
 mkdir -p "${build_dir}" "${grc_dir}"
@@ -56,9 +56,8 @@ mkdir -p "${build_dir}" "${grc_dir}"
 # install scapy
 cd "${build_dir}"
 print_status "SCAPY"
-print_status "Getting scapy"
-git clone https://github.com/secdev/scapy.git
-apply_patches scapy 
+cp -r ../scapy .
+apply_patches scapy
 cd scapy
 print_status "Building and installing scapy"
 sudo python3 setup.py install

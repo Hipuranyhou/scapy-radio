@@ -6,7 +6,6 @@ efficient pentest tool with RF capabilities.
 It includes:
 
 * A modified version of scapy that can leverage GNU Radio to handle a SDR card
-* GNU Radio flow graphs (GRC files) we have build that allows full duplex communication
 * GNU Radio blocks we have written to handle several protocols
 
 
@@ -38,61 +37,33 @@ If you want to install everything, just launch:
 The script will prompt you for your password to install the tools system-wide
 using `sudo` command.
 
-Usage:
-
-`$ ./install.sh [scapy|grc|blocks] ...`
-
-
-## Options
-
-### scapy
-This will install or update scapy installation. This option is useful when you
-have added/modified layers and want to make them available in your system
-
-### grc
-This will copy all the GRC files into `$HOME/.scapy/radio/` and it will also
-convert them automatically into Python files using `grcc` command.
-
-### blocks
-This will build all the extra blocks you have written for GNU Radio and install
-them.
-
 
 # Usage
 
-The tool can be launched by using the following command:
+The tool can be launched by using the following in scapy interactive shell:
 
-`$ scapy-radio`
+` >>> load_module("gnuradio")`
 
 ## Switch between protocol
 
-One in the scapy interactive shell, switching between radio protocols is as
+Switching between radio protocols is as
 simple as:
 
-` >>> switch_radio_protocol("Zigbee")`
+` >>> gnuradio_start_flowgraph("Zigbee")`
 
 You can also specify the radio protocol directly to some "radio-enabled" functions:
 
-` >>> sniff_radio(radio="Zigbee")`
+` >>> sniffradio(flowgraph="Zigbee")`
 
 ## Radio commands
 
-* `switch_radio_protocol(layer, *args, **kargs)`: change the current radio protocol
-* `sniffradio(opened_socket=None, radio=None, *args, **kargs)`: works like `sniff()`
-* `srradio(pkts, inter=0.1, *args, **kargs)`: works like `sr()`
-* `srradio1(pkts, *args, **kargs)`: works like `sr1()`
-* `gnuradio_get_vars(*args, **kargs)`: get variables for the running GRC
-* `gnuradio_set_vars(host="localhost", port=8080, **kargs)`: set variable for the running GRC
-* `gnuradio_start_graph(host="localhost", port=8080)`: resume the running GRC
-* `gnuradio_stop_graph(host="localhost", port=8080)`: pause the running GRC
+* `gnuradio_start_flowgraph(flowgraph, params=[], env=None)`: ---
+* `gnuradio_stop_flowgraph()`: ---
+* `gnuradio_pause_flowgraph(gr_host="localhost", gr_port=8080)`: ---
+* `gnuradio_resume_flowgraph(gr_host="localhost", gr_port=8080)`: ---
+* `gnuradio_get_vars(*args, gr_host="localhost", gr_port=8080)`: ---
+* `gnuradio_set_vars(gr_host="localhost", gr_port=8080, **kwargs)`: ---
+* `srradio(pkts, inter=0.1, *args, **kwargs)`: ---
+* `sniffradio(opened_socket=None, flowgraph=None, *args, **kwargs)`: ---
 
-
-## Reading / Writing PCAP files
-
-The tool allows writing and reading back PCAP files with the usual `scapy` command:
-
-```python
->>> wrpcap("pcap-file.pcap", pkts)
->>> pkts2 = rdpcap("pcap-file.pcap")
-```
 

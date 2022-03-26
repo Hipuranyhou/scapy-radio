@@ -1,6 +1,6 @@
-diff --new-file -ru orig/scapy/scapy/layers/dot15d4.py scapy/scapy/layers/dot15d4.py
---- orig/scapy/scapy/layers/dot15d4.py	2022-02-25 16:23:33.221105860 +0100
-+++ scapy/scapy/layers/dot15d4.py	2022-02-25 13:36:01.314561655 +0100
+diff --new-file -ru -x '.vscode*' orig/scapy/scapy/layers/dot15d4.py scapy/scapy/layers/dot15d4.py
+--- orig/scapy/scapy/layers/dot15d4.py	2022-03-26 15:03:48.176550016 +0100
++++ scapy/scapy/layers/dot15d4.py	2022-03-26 15:04:15.072259776 +0100
 @@ -36,6 +36,8 @@
      XByteField,
      XLEIntField,
@@ -10,9 +10,9 @@ diff --new-file -ru orig/scapy/scapy/layers/dot15d4.py scapy/scapy/layers/dot15d
  )
  
  # Fields #
-diff --new-file -ru orig/scapy/scapy/layers/gnuradio.py scapy/scapy/layers/gnuradio.py
+diff --new-file -ru -x '.vscode*' orig/scapy/scapy/layers/gnuradio.py scapy/scapy/layers/gnuradio.py
 --- orig/scapy/scapy/layers/gnuradio.py	1970-01-01 01:00:00.000000000 +0100
-+++ scapy/scapy/layers/gnuradio.py	2022-02-25 13:35:12.748634140 +0100
++++ scapy/scapy/layers/gnuradio.py	2022-03-26 15:04:15.072259776 +0100
 @@ -0,0 +1,26 @@
 +## This file is part of Scapy
 +## See http://www.secdev.org/projects/scapy for more information
@@ -40,39 +40,50 @@ diff --new-file -ru orig/scapy/scapy/layers/gnuradio.py scapy/scapy/layers/gnura
 +bind_layers(GnuradioPacket, Dot15d4FCS, proto=2)
 +
 +conf.l2types.register(148, GnuradioPacket)
-diff --new-file -ru orig/scapy/scapy/modules/gnuradio.py scapy/scapy/modules/gnuradio.py
+diff --new-file -ru -x '.vscode*' orig/scapy/scapy/modules/gnuradio.py scapy/scapy/modules/gnuradio.py
 --- orig/scapy/scapy/modules/gnuradio.py	1970-01-01 01:00:00.000000000 +0100
-+++ scapy/scapy/modules/gnuradio.py	2022-02-25 14:11:07.989258378 +0100
-@@ -0,0 +1,230 @@
-+## This file is part of Scapy
-+## See http://www.secdev.org/projects/scapy for more information
-+## Copyright (C) Airbus DS CyberSecurity
-+## Authors: Jean-Michel Picod, Arnaud Lebrun, Jonathan Christofer Demay
-+## This program is published under a GPLv2 license
++++ scapy/scapy/modules/gnuradio.py	2022-03-26 15:05:06.353768629 +0100
+@@ -0,0 +1,277 @@
++# This file is part of Scapy
++# See http://www.secdev.org/projects/scapy for more information
++# Copyright (C) Airbus DS CyberSecurity
++# Authors: Jean-Michel Picod, Arnaud Lebrun, Jonathan Christofer Demay
++# This program is published under a GPLv2 license
++
++# changes based on
++# https://github.com/BastilleResearch/scapy-radio/blob/master/scapy/scapy/modules/gnuradio.py
++# https://github.com/jkulskis/scapy-radio/blob/master/scapy/scapy/modules/gnuradio.py
 +
 +"""
 +Gnuradio layers, sockets and send/receive functions.
 +"""
 +
-+import os
-+import subprocess
-+import socket, struct
++from typing import List
++import xmlrpc.client
++import socket
++import struct
 +import atexit
-+from scapy.config import conf
-+from scapy.data import MTU
-+from scapy.packet import *
-+from scapy.fields import *
-+from scapy.supersocket import SuperSocket
-+from scapy import sendrecv
-+from scapy import main
-+import scapy.layers.gnuradio
++import os
++import sys
++import subprocess
++import time
++import datetime
++import errno
++import logging
++
++from scapy.layers.gnuradio import GnuradioPacket
++import scapy.all as sp
 +
 +
-+class GnuradioSocket(SuperSocket):
++logger = logging.getLogger("scapy.gnuradio")
++logger.setLevel(logging.INFO)
++
++
++class GnuradioSocket(sp.SuperSocket):
 +    desc = "read/write packets on a UDP Gnuradio socket"
 +
-+    def __init__(self, peer="127.0.0.1"):
-+        SuperSocket.__init__(self, socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
++    def __init__(self, peer: str = "127.0.0.1") -> None:
++        super().__init__(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 +        self.outs = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 +        self.tx_addr = (peer, 52001)
 +        self.rx_addr = (peer, 52002)
@@ -85,192 +96,228 @@ diff --new-file -ru orig/scapy/scapy/modules/gnuradio.py scapy/scapy/modules/gnu
 +            pass
 +        self.ins.bind(self.rx_addr)
 +
-+    def recv(self, x=MTU):
++    def recv(self, x=sp.MTU):
 +        data, addr = self.ins.recvfrom(x)
-+        p = scapy.layers.gnuradio.GnuradioPacket(data)
-+        return p
++        pkt = GnuradioPacket(data)
++        # check if a valid gnuradio protocol, otherwise return a raw Packet
++        if pkt.fields["proto"] not in range(1, 6):
++            return sp.Packet(data)
++        # strip gnuradio layer
++        return pkt[GnuradioPacket].payload
 +
 +    def send(self, pkt):
-+        if not pkt.haslayer(scapy.layers.gnuradio.GnuradioPacket):
-+            pkt = scapy.layers.gnuradio.GnuradioPacket()/pkt
-+        sx = str(pkt)
++        # add gnuradio layer
++        if not pkt.haslayer(GnuradioPacket):
++            pkt = GnuradioPacket() / pkt
++        sx = pkt.build()
 +        if hasattr(pkt, "sent_time"):
 +            pkt.sent_time = time.time()
 +        self.outs.sendto(sx, self.tx_addr)
 +
 +
-+@conf.commands.register
-+def srradio(pkts, inter=0.1, *args, **kargs):
++@sp.conf.commands.register
++def gnuradio_stop_flowgraph():
++    if sp.conf.gr_process is not None:  # check if the process is running
++        sp.conf.gr_process.kill()
++        sp.conf.gr_process = None
++    for k, v in sp.conf.gr_process_io.items():
++        if v is not None and not v.closed:
++            v.close()
++            v = None
++
++
++@sp.conf.commands.register
++def gnuradio_get_vars(*args, gr_host="localhost", gr_port=8080):
++    if not args:
++        return
++    rv = {}
++    with xmlrpc.client.ServerProxy(f"http://{gr_host}:{gr_port}") as p:
++        for v in args:
++            try:
++                res = getattr(p, f"get_{v}")()
++                rv[v] = res
++            except xmlrpc.client.Fault as e:
++                logger.error(f"{e}")
++    return rv
++
++
++@sp.conf.commands.register
++def gnuradio_set_vars(gr_host="localhost", gr_port=8080, **kwargs):
++    if not kwargs:
++        return
++    with xmlrpc.client.ServerProxy(f"http://{gr_host}:{gr_port}") as p:
++        for k, v in kwargs.items():
++            try:
++                getattr(p, f"set_{k}")(v)
++            except xmlrpc.client.Fault as e:
++                logger.error(f"{e}")
++
++
++def wait_for_radio(gr_host="localhost", gr_port=8080, timeout=20):
++    logger.info(f"waiting {timeout}s for SDR to start up")
++    start_time = time.time()
++    # try to connect to the XMLRPC server in the flowgraph
++    while True:
++        try:
++            gnuradio_get_vars("channel")
++            break
++        except ConnectionRefusedError:
++            if time.time() - start_time > timeout:
++                logger.error(f"SDR did not start in the last {timeout}s")
++                sys.exit(1)
++            time.sleep(2)
++            continue
++        except ConnectionResetError:
++            logger.error("SDR not connected")
++            sys.exit(1)
++        except KeyError:  # may not have a varaible called "channel" in the flowgraph, but that's fine
++            logger.error("Flowgraph missing variable 'channel'")
++            sys.exit(1)
++    # wait an extra 3 seconds so that everything is up and running
++    time.sleep(3)
++    logger.info("SDR ready")
++
++
++@sp.conf.commands.register
++def gnuradio_start_flowgraph(flowgraph, params=[], env=None):
++    """Launches Gnuradio in background"""
++    # exit previous
++    if sp.conf.gr_process is not None:
++        gnuradio_stop_flowgraph()
++    sp.conf.gr_process_io = {
++        "stdout": open("/tmp/gnuradio.log", "w+"),
++        "stderr": open("/tmp/gnuradio-err.log", "w+"),
++    }
++    # try to start flowgraph
++    if flowgraph not in sp.conf.gr_flowgraphs:
++        raise AttributeError(f"Unknown gnuradio flowgraph: {flowgraph}")
++    try:
++        full_cmd = ["env", "python3", sp.conf.gr_flowgraphs[flowgraph]] + params
++        sp.conf.gr_process = subprocess.Popen(
++            full_cmd,
++            env=env,
++            stdout=sp.conf.gr_process_io["stdout"],
++            stderr=sp.conf.gr_process_io["stderr"],
++            stdin=subprocess.PIPE,
++            preexec_fn=os.setpgrp,
++        )
++        wait_for_radio()
++    except OSError:
++        return False
++    # nice
++    return True
++
++
++@sp.conf.commands.register
++def gnuradio_pause_flowgraph(gr_host="localhost", gr_port=8080):
++    with xmlrpc.client.ServerProxy(f"http://{gr_host}:{gr_port}") as p:
++        try:
++            p.stop()
++            p.wait()
++        except xmlrpc.client.Fault as f:
++            logger.error(f"{f.faultCode} => {f.faultString}")
++
++
++@sp.conf.commands.register
++def gnuradio_resume_flowgraph(gr_host="localhost", gr_port=8080):
++    with xmlrpc.client.ServerProxy(f"http://{gr_host}:{gr_port}") as p:
++        try:
++            p.start()
++        except xmlrpc.client.Fault as f:
++            logger.error(f"{f.faultCode} => {f.faultString}")
++
++
++@sp.conf.commands.register
++def srradio(pkts, inter=0.1, *args, **kwargs):
 +    """send and receive using a Gnuradio socket"""
 +    s = GnuradioSocket()
-+    a, b = sendrecv.sndrcv(s, pkts, inter=inter, *args, **kargs)
++    a, b = sp.sndrcv(s, pkts, inter=inter, *args, **kwargs)
 +    s.close()
 +    return a, b
 +
 +
-+@conf.commands.register
-+def srradio1(pkts, *args, **kargs):
-+    """send and receive 1 packet using a Gnuradio socket"""
-+    a, b = srradio(pkts, *args, **kargs)
-+    if len(a) > 0:
-+        return a[0][1]
-+
-+
-+@conf.commands.register
-+def sniffradio(opened_socket=None, radio=None, *args, **kargs):
-+    if radio is not None:
-+        switch_radio_protocol(radio)
++@sp.conf.commands.register
++def sniffradio(opened_socket=None, flowgraph=None, *args, **kwargs):
++    if flowgraph is not None:
++        gnuradio_start_flowgraph(flowgraph)
 +    s = opened_socket if opened_socket is not None else GnuradioSocket()
-+    rv = sendrecv.sniff(opened_socket=s, *args, **kargs)
++    rv = sp.sniff(opened_socket=s, *args, **kwargs)
 +    if opened_socket is None:
 +        s.close()
 +    return rv
 +
 +
-+def build_modulations_dict():
-+    conf.gr_modulations = {}
-+    grc_files = dict.fromkeys([x.rstrip(".grc") for x in os.listdir(conf.gr_mods_path) if x.endswith(".grc")], 0)
-+    topblocks = dict.fromkeys(
-+        [x for x in os.listdir(conf.gr_mods_path) if os.path.isdir(os.path.join(conf.gr_mods_path, x))], 0)
-+    for x in grc_files.keys():
-+        grc_files[x] = os.stat(os.path.join(conf.gr_mods_path, x + ".grc")).st_mtime
-+        try:
-+            os.mkdir(os.path.join(conf.gr_mods_path, x))
-+            topblocks[x] = 0
-+        except OSError:
-+            pass
-+    for x in topblocks.keys():
-+        topblocks[x] = os.stat(os.path.join(conf.gr_mods_path, x, 'top_block.py')).st_mtime if os.path.isfile(
-+            os.path.join(conf.gr_mods_path, x, 'top_block.py')) else 0
-+    for x in grc_files.keys():
-+        if grc_files[x] > topblocks[x]:
-+            outdir = "--directory=%s" % os.path.join(conf.gr_mods_path, x)
-+            input_grc = os.path.join(conf.gr_mods_path, x + ".grc")
++def build_flowgraphs_dict():
++    # reset
++    sp.conf.gr_flowgraphs = {}
++    # find known
++    flowgraphs = dict.fromkeys(
++        [
++            os.path.join(sp.conf.gr_flowgraphs_path, x)
++            for x in os.listdir(sp.conf.gr_flowgraphs_path)
++            if os.path.isdir(os.path.join(sp.conf.gr_flowgraphs_path, x))
++        ],
++        0,
++    )
++    grc = dict.fromkeys(
++        [
++            os.path.join(x, x + ".grc")
++            for x in flowgraphs.keys()
++            if os.path.isfile(os.path.join(x, x + ".grc"))
++        ],
++        0,
++    )
++    top = dict.fromkeys(
++        [
++            os.path.join(x, "top_block.py")
++            for x in flowgraphs.keys()
++            if os.path.isfile(os.path.join(x, "top_block.py"))
++        ],
++        0,
++    )
++    # save mtimes for compare
++    for x in grc.keys():
++        grc[x] = os.stat(x).st_mtime
++    for x in top.keys():
++        top[x] = os.stat(x).st_mtime
++    # call grcc for changed grcs
++    for x in grc.keys():
++        flowgraphdir = os.path.dirname(x)
++        top_x = os.path.join(flowgraphdir, "top_block.py")
++        if top_x not in top or grc[x] > top[top_x]:
 +            try:
-+                subprocess.check_call(["grcc", outdir, input_grc])
-+            except:
-+                pass
-+    for x in topblocks.keys():
-+        if os.path.isfile(os.path.join(conf.gr_mods_path, x, 'top_block.py')):
-+            conf.gr_modulations[x] = os.path.join(conf.gr_mods_path, x, 'top_block.py')
++                subprocess.check_call(["grcc", f"-o {flowgraphdir}", x])
++                # save new top_block
++                if top_x not in top:
++                    top[top_x] = os.stat(top_x).st_mtime
++            except Exception:
++                logger.exception(f"Failed to grcc flowgraph {x}")
++    # save all top_blocks
++    for x in top.keys():
++        name = os.path.basename(os.path.normpath(os.path.dirname(x)))
++        sp.conf.gr_flowgraphs[name] = x
 +
 +
-+def sigint_ignore():
-+    import os
-+    os.setpgrp()
++def initial_setup():
++    # scapy config
++    sp.conf.L2socket = GnuradioSocket
++    sp.conf.L3socket = GnuradioSocket
++    sp.conf.L2listen = GnuradioSocket
++    # custom config
++    sp.conf.gr_flowgraphs_path = os.path.join(
++        os.path.expanduser("~"), ".config/scapy/radio/flowgraphs"
++    )
++    sp.conf.gr_flowgraphs = {}
++    sp.conf.gr_process = None
++    sp.conf.gr_process_io = {}
++    # init
++    if not os.path.exists(sp.conf.gr_flowgraphs_path):
++        os.makedirs(sp.conf.gr_flowgraphs_path)
++    for layer in ["gnuradio", "dot15d4"]:
++        sp.load_layer(layer)
++    build_flowgraphs_dict()
++    # exit
++    atexit.register(gnuradio_stop_flowgraph)
 +
 +
-+@conf.commands.register
-+def gnuradio_set_vars(host="localhost", port=8080, **kargs):
-+    try:
-+        import xmlrpc.client as xc
-+    except ImportError:
-+        print("xmlrpc.client is missing to use this function.")
-+    else:
-+        s = xc.Server("http://%s:%d" % (host, port))
-+        for k, v in kargs.items():
-+            try:
-+                getattr(s, "set_%s" % k)(v)
-+            except xc.Fault:
-+                print(f"Unknown variable '{k}'")
-+        s = None
-+
-+
-+@conf.commands.register
-+def gnuradio_get_vars(*args, **kargs):
-+    if "host" not in kargs:
-+        kargs["host"] = "127.0.0.1"
-+    if "port" not in kargs:
-+        kargs["port"] = 8080
-+    rv = {}
-+    try:
-+        import xmlrpc.client as xc
-+    except ImportError:
-+        print("xmlrpc.client is missing to use this function.")
-+    else:
-+        s = xc.Server("http://%s:%d" % (kargs["host"], kargs["port"]))
-+        for v in args:
-+            try:
-+                res = getattr(s, "get_%s" % v)()
-+                rv[v] = res
-+            except xc.Fault:
-+                print(f"Unknown variable '{v}'")
-+        s = None
-+    if len(args) == 1:
-+        return rv[args[0]]
-+    return rv
-+
-+
-+@conf.commands.register
-+def gnuradio_stop_graph(host="localhost", port=8080):
-+    try:
-+        import xmlrpc.client
-+    except ImportError:
-+        print("xmlrpc.client is missing to use this function.")
-+    else:
-+        s = xc.Server("http://%s:%d" % (host, port))
-+        s.stop()
-+        s.wait()
-+
-+
-+@conf.commands.register
-+def gnuradio_start_graph(host="localhost", port=8080):
-+    try:
-+        import xmlrpc.client
-+    except ImportError:
-+        print("xmlrpc.client is missing to use this function.")
-+    else:
-+        s = xc.Server("http://%s:%d" % (host, port))
-+        try:
-+            s.start()
-+        except xc.Fault as e:
-+            print(f"ERROR: {e.faultString}")
-+
-+
-+@conf.commands.register
-+def switch_radio_protocol(layer, *args, **kargs):
-+    """Launches Gnuradio in background"""
-+    if conf.gr_modulations is None:
-+        build_modulations_dict()
-+    if not hasattr(conf, 'gr_process_io') or conf.gr_process_io is None:
-+        conf.gr_process_io = {'stdout': open('/tmp/gnuradio.log', 'w+'), 'stderr': open('/tmp/gnuradio-err.log', 'w+')}
-+    if layer not in conf.gr_modulations:
-+        print("")
-+        print("Available layers: %s" % ", ".join(conf.gr_modulations.keys()))
-+        print("")
-+        raise AttributeError("Unknown radio layer %s" % layer)
-+    if conf.gr_process is not None:
-+        # An instance is already running
-+        conf.gr_process.kill()
-+        conf.gr_process = None
-+    try:
-+        conf.gr_process = subprocess.Popen(["env", "python3", conf.gr_modulations[layer]], preexec_fn=sigint_ignore, stdout=conf.gr_process_io['stdout'], stderr=conf.gr_process_io['stderr'])
-+    except OSError:
-+        return False
-+    return True
-+
-+
-+def gnuradio_exit(c):
-+    if hasattr(c, "gr_process") and hasattr(c.gr_process, "kill"):
-+        c.gr_process.kill()
-+    if hasattr(c, "gr_process_io") and c.gr_process_io is dict:
-+        for k in c.gr_process_io.keys():
-+            if c.gr_process_io[k] is file and not c.gr_process_io[k].closed:
-+                c.gr_process_io[k].close()
-+                c.gr_process_io[k] = None
-+
-+
-+atexit.register(gnuradio_exit, conf)
-+conf.L2socket = GnuradioSocket
-+conf.L3socket = GnuradioSocket
-+conf.L2listen = GnuradioSocket
-+for l in ["gnuradio", "dot15d4"]:
-+    main.load_layer(l)
-+conf.gr_modulations = {}
-+conf.gr_process = None
-+conf.gr_mods_path = os.path.join(os.path.expanduser("~"), ".scapy", "radio")
-+
-+if not os.path.exists(conf.gr_mods_path):
-+    os.makedirs(conf.gr_mods_path)
-+build_modulations_dict()
-+
++initial_setup()
