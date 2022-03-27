@@ -1,6 +1,6 @@
 diff --new-file -ru -x '.vscode*' orig/scapy/scapy/layers/dot15d4.py scapy/scapy/layers/dot15d4.py
 --- orig/scapy/scapy/layers/dot15d4.py	2022-03-26 15:03:48.176550016 +0100
-+++ scapy/scapy/layers/dot15d4.py	2022-03-26 15:04:15.072259776 +0100
++++ scapy/scapy/layers/dot15d4.py	2022-03-27 12:23:42.493873452 +0200
 @@ -36,6 +36,8 @@
      XByteField,
      XLEIntField,
@@ -12,7 +12,7 @@ diff --new-file -ru -x '.vscode*' orig/scapy/scapy/layers/dot15d4.py scapy/scapy
  # Fields #
 diff --new-file -ru -x '.vscode*' orig/scapy/scapy/layers/gnuradio.py scapy/scapy/layers/gnuradio.py
 --- orig/scapy/scapy/layers/gnuradio.py	1970-01-01 01:00:00.000000000 +0100
-+++ scapy/scapy/layers/gnuradio.py	2022-03-26 15:04:15.072259776 +0100
++++ scapy/scapy/layers/gnuradio.py	2022-03-27 12:23:42.493873452 +0200
 @@ -0,0 +1,26 @@
 +## This file is part of Scapy
 +## See http://www.secdev.org/projects/scapy for more information
@@ -42,7 +42,7 @@ diff --new-file -ru -x '.vscode*' orig/scapy/scapy/layers/gnuradio.py scapy/scap
 +conf.l2types.register(148, GnuradioPacket)
 diff --new-file -ru -x '.vscode*' orig/scapy/scapy/modules/gnuradio.py scapy/scapy/modules/gnuradio.py
 --- orig/scapy/scapy/modules/gnuradio.py	1970-01-01 01:00:00.000000000 +0100
-+++ scapy/scapy/modules/gnuradio.py	2022-03-26 15:05:06.353768629 +0100
++++ scapy/scapy/modules/gnuradio.py	2022-03-27 12:23:42.493873452 +0200
 @@ -0,0 +1,277 @@
 +# This file is part of Scapy
 +# See http://www.secdev.org/projects/scapy for more information
@@ -321,3 +321,15 @@ diff --new-file -ru -x '.vscode*' orig/scapy/scapy/modules/gnuradio.py scapy/sca
 +
 +
 +initial_setup()
+diff --new-file -ru -x '.vscode*' orig/scapy/scapy/sendrecv.py scapy/scapy/sendrecv.py
+--- orig/scapy/scapy/sendrecv.py	2022-03-26 15:03:48.189882875 +0100
++++ scapy/scapy/sendrecv.py	2022-03-27 12:25:17.817141200 +0200
+@@ -411,7 +411,7 @@
+     """Internal function used by send and sendp"""
+     need_closing = socket is None
+     iface = resolve_iface(iface or conf.iface)
+-    socket = socket or _func(iface)(iface=iface, **kargs)
++    socket = socket or _func(iface)(**kargs)
+     results = __gen_send(socket, x, inter=inter, loop=loop,
+                          count=count, verbose=verbose,
+                          realtime=realtime, return_packets=return_packets)
