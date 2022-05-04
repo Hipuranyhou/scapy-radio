@@ -42,7 +42,7 @@ diff --new-file -ru -x '.vscode*' orig/scapy/scapy/layers/gnuradio.py scapy/scap
 +conf.l2types.register(148, GnuradioPacket)
 diff --new-file -ru -x '.vscode*' orig/scapy/scapy/modules/gnuradio.py scapy/scapy/modules/gnuradio.py
 --- orig/scapy/scapy/modules/gnuradio.py	1970-01-01 01:00:00.000000000 +0100
-+++ scapy/scapy/modules/gnuradio.py	2022-03-27 12:23:42.493873452 +0200
++++ scapy/scapy/modules/gnuradio.py	2022-05-04 12:36:31.816302047 +0200
 @@ -0,0 +1,277 @@
 +# This file is part of Scapy
 +# See http://www.secdev.org/projects/scapy for more information
@@ -179,7 +179,7 @@ diff --new-file -ru -x '.vscode*' orig/scapy/scapy/modules/gnuradio.py scapy/sca
 +
 +
 +@sp.conf.commands.register
-+def gnuradio_start_flowgraph(flowgraph, params=[], env=None):
++def gnuradio_start_flowgraph(flowgraph, timeout=20, params=[], env=None):
 +    """Launches Gnuradio in background"""
 +    # exit previous
 +    if sp.conf.gr_process is not None:
@@ -201,7 +201,7 @@ diff --new-file -ru -x '.vscode*' orig/scapy/scapy/modules/gnuradio.py scapy/sca
 +            stdin=subprocess.PIPE,
 +            preexec_fn=os.setpgrp,
 +        )
-+        wait_for_radio()
++        wait_for_radio(timeout=timeout)
 +    except OSError:
 +        return False
 +    # nice
