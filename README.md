@@ -21,7 +21,7 @@ It includes:
 * 802.15.4 (used by Zigbee, Xbee, 6LoWPAN)
 
 
-# Requirements
+## Requirements
 
 You need to have a full working GNU Radio 3.8 installation.
 
@@ -32,7 +32,7 @@ You can also edit the GRC files to replace UHD Sink/Source blocks by the
 corresponding Osmocom blocks. Don't forget to set the parameters correctly.
 
 
-# Installation
+## Installation
 
 We tried to make the installation as easy as possible.
 
@@ -44,7 +44,7 @@ The script will prompt you for your password to install the tools system-wide
 using `sudo` command.
 
 
-# Usage
+## Usage
 
 The tool can be launched by using the following in scapy interactive shell:
 
