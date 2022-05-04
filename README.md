@@ -1,4 +1,11 @@
-# Introduction
+# scapy-radio
+
+Fork of [BastilleResearch/scapy-radio](https://github.com/BastilleResearch/scapy-radio) ported to GNU Radio 3.8 Ubuntu 20.04 LTS.
+
+GNU Radio 3.9/3.10 and Ubuntu 22.04 LTS coming.
+
+
+## Introduction
 
 This tool is a modified version of scapy that aims at providing an quick and
 efficient pentest tool with RF capabilities.
@@ -7,7 +14,6 @@ It includes:
 
 * A modified version of scapy that can leverage GNU Radio to handle a SDR card
 * GNU Radio blocks we have written to handle several protocols
-
 
 
 ## Supported radio protocols:
@@ -57,7 +63,7 @@ You can also specify the radio protocol directly to some "radio-enabled" functio
 
 ## Radio commands
 
-* `gnuradio_start_flowgraph(flowgraph, params=[], env=None)`: ---
+* `gnuradio_start_flowgraph(flowgraph, params=[], env=None, timeout=20)`: ---
 * `gnuradio_stop_flowgraph()`: ---
 * `gnuradio_pause_flowgraph(gr_host="localhost", gr_port=8080)`: ---
 * `gnuradio_resume_flowgraph(gr_host="localhost", gr_port=8080)`: ---
